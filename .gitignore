@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+
+# Production builds
+/dist/
+/build/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage / test output
+coverage/
+.vitest/
+
+# TypeScript / build caches
+*.tsbuildinfo
+.cache/
+.vite/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.iml
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Local extension artifacts / packaged builds
+*.zip
+*.crx
+*.xpi
+
+# Optional local test/browser profiles
+.test-browser/
+.browser-profile/
+
+# Vercel / deployment metadata (if this repo is deployed separately)
+.vercel/
+
+# Personal/local backups
+backup/
+backups/
+*.backup

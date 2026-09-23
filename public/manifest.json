@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "SafeBrowse — Web Policy & Parental Controls",
+  "version": "2.0.0",
+  "description": "Local-first browser parental controls with domain policies, schedules, category filtering, logs and analytics.",
+  "minimum_chrome_version": "121",
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background/serviceWorker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open SafeBrowse",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/sr-16.png",
+      "32": "icons/sr-32.png",
+      "48": "icons/sr-48.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "blocked.html",
+        "assets/*"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "icons": {
+    "16": "icons/sr-16.png",
+    "32": "icons/sr-32.png",
+    "48": "icons/sr-48.png",
+    "128": "icons/sr-128.png"
+  }
+}
