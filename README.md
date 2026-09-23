@@ -1,70 +1,43 @@
 # SafeBrowse — Web Policy & Parental Controls
 
-SafeBrowse is a **local-first browser extension for web filtering and parental controls**. It turns user-defined access rules into browser-enforced network policies and provides a management console for domains, categories, schedules, profiles, activity, analytics, and administration.
+SafeBrowse is a **local-first browser extension for web filtering and parental controls**. It turns user-defined access rules into browser-enforced policies and provides a management console for domains, categories, schedules, profiles, activity, analytics, and administration.
 
-The project is built around **Manifest V3** and the browser's `declarativeNetRequest` API. The core idea is simple: instead of treating web blocking as a static list of URLs, SafeBrowse treats access control as a **policy-engine problem** with priorities, schedules, profiles, exceptions, and measurable enforcement activity.
+Built with **React, TypeScript, Vite, and Manifest V3**, SafeBrowse treats web blocking as a **policy-engine problem** rather than a simple static blocklist. Policies can be combined with priorities, schedules, profiles, exceptions, and enforcement analytics.
 
-> **Current target:** Chromium-based browsers, with Microsoft Edge and Google Chrome as the primary release targets.
-
----
-
-## Contents
-
-- [Why SafeBrowse?](#why-safebrowse)
-- [Key Features](#key-features)
-- [How It Works](#how-it-works)
-- [Architecture](#architecture)
-- [Policy Engine](#policy-engine)
-- [Analytics Pipeline](#analytics-pipeline)
-- [Security & Privacy](#security--privacy)
-- [Technology Stack](#technology-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Build the Extension](#build-the-extension)
-- [Run in Microsoft Edge](#run-in-microsoft-edge)
-- [Run in Google Chrome](#run-in-google-chrome)
-- [Testing](#testing)
-- [Configuration & Data](#configuration--data)
-- [Permission Model](#permission-model)
-- [Browser Compatibility](#browser-compatibility)
-- [Limitations](#limitations)
-- [Release & Store Publishing](#release--store-publishing)
-- [Development Workflow](#development-workflow)
-- [Future Improvements](#future-improvements)
-- [Project Status](#project-status)
-- [License](#license)
-- [Author](#author)
+> **Primary targets:** Google Chrome and Microsoft Edge
+> **Extension platform:** Chromium / Manifest V3
 
 ---
 
-## Why SafeBrowse?
+## Overview
 
-A basic website blocker usually works like this:
+A basic website blocker usually works like:
 
 ```text
-Add site → Block site
+Add website → Block website
 ```
 
-That is useful, but it quickly becomes limiting when a user needs more control:
+That works for simple use cases, but becomes limited when users need more control.
 
-- block social media only during school or work hours;
-- allow a specific educational URL inside a blocked domain;
-- use different policies for different profiles;
-- understand which websites are repeatedly blocked;
-- test a rule before applying it;
-- lock administrative settings behind a parent PIN.
+SafeBrowse is designed to support scenarios such as:
 
-SafeBrowse addresses these requirements with a **rule-driven browser policy system**.
+* blocking social media during school or work hours;
+* allowing specific exceptions inside broader blocked domains;
+* managing different rules for different profiles;
+* scheduling restrictions automatically;
+* testing policies before applying them;
+* protecting administration with a parent PIN;
+* understanding which policies are producing blocked requests.
+
+The result is a browser-level policy system rather than a simple URL blocker.
 
 ---
 
 ## Key Features
 
-### 1. Domain & Website Blocking
+### Domain & Website Blocking
 
-Users can create policies for individual domains or URL targets.
-
-Example:
+Create policies for individual domains or URL targets.
 
 ```text
 youtube.com      → BLOCK
@@ -72,11 +45,11 @@ instagram.com    → BLOCK
 reddit.com       → BLOCK
 ```
 
-SafeBrowse converts those policies into browser-level rules for top-level navigation requests.
+Policies are translated into browser-level declarative rules for top-level navigation requests.
 
-### 2. Allow Rules & Exceptions
+### Allow Rules & Exceptions
 
-Policies can also explicitly allow traffic, which makes exceptions possible.
+SafeBrowse supports both `BLOCK` and `ALLOW` policies.
 
 Example:
 
@@ -88,11 +61,11 @@ Allow:
 youtube.com/education/*
 ```
 
-The policy engine evaluates overlapping rules using its documented conflict-resolution behavior rather than relying on arbitrary ordering.
+This allows specific exceptions to coexist with broader restrictions.
 
-### 3. Category Filtering
+### Category Filtering
 
-Instead of maintaining a block list one domain at a time, users can apply policies to configured categories such as:
+Users can create policies around configured categories such as:
 
 ```text
 Social Media
@@ -101,11 +74,11 @@ Streaming
 Shopping
 ```
 
-The category is expanded into its configured target domains and then passed through the same policy engine.
+Category targets are expanded into their configured domains and processed through the same policy engine.
 
-### 4. Scheduled Restrictions
+### Scheduled Restrictions
 
-Policies can be enabled only during configured days and time windows.
+Policies can operate only during configured days and time windows.
 
 Example:
 
@@ -117,15 +90,21 @@ Days: Monday–Friday
 Time: 08:00–16:00
 ```
 
-Cross-midnight schedules such as `22:00 → 06:00` are also supported.
+Cross-midnight schedules such as:
 
-Scheduling is coordinated through the browser alarms API so the management dashboard does not need to stay open.
+```text
+22:00 → 06:00
+```
 
-### 5. Policy Priorities & Conflict Resolution
+are supported.
 
-Multiple policies can match the same destination. SafeBrowse therefore assigns priorities and evaluates the applicable policies deterministically.
+Scheduling is coordinated through the browser alarms API so the management console does not need to remain open.
 
-This supports use cases such as:
+### Policy Priorities & Conflict Resolution
+
+Multiple policies may match the same destination.
+
+Example:
 
 ```text
 Rule A
@@ -137,13 +116,11 @@ Allow youtube.com/education/*
 Priority: 200
 ```
 
-The policy engine is kept separate from the UI so the same decision logic can be used by the simulator and the enforcement layer.
+SafeBrowse evaluates applicable rules deterministically so overlapping policies and exceptions produce predictable results.
 
-### 6. Policy Simulator
+### Policy Simulator
 
-Users can test a URL against the active policy set before relying on it.
-
-Example:
+Test a URL against the active policy set before relying on it.
 
 ```text
 URL:
@@ -156,9 +133,9 @@ Matched policy:
 School Hours
 ```
 
-This makes rule behavior easier to understand and debug.
+The simulator uses the same policy decision logic used by the enforcement layer.
 
-### 7. Multiple Profiles
+### Multiple Profiles
 
 SafeBrowse supports separate policy sets for different profiles.
 
@@ -174,21 +151,21 @@ Profile: Child 2
   Streaming    → BLOCK
 ```
 
-Each profile can have its own policies and enforcement history.
+Each profile maintains its own policy configuration and enforcement history.
 
-### 8. Parent Console Protection
+### Parent Console Protection
 
 Administrative controls can be protected by a parent PIN.
 
-The raw PIN is not stored. SafeBrowse uses a salted PBKDF2-derived verifier through the Web Crypto API for authentication.
+SafeBrowse does not store the raw PIN. It uses a salted PBKDF2-derived verifier through the Web Crypto API.
 
-The parent console can be locked after configuration changes so policy administration requires authentication.
+The parent console can be locked after configuration changes.
 
-### 9. Local Activity Logging
+### Activity Logging
 
-When a top-level navigation is blocked, SafeBrowse records a policy-enforcement event for the Activity and Analytics features.
+When a top-level navigation is blocked, SafeBrowse records a policy-enforcement event for its Activity and Analytics features.
 
-An event may contain information such as:
+Events can include:
 
 ```text
 Domain
@@ -200,39 +177,37 @@ Category
 Event type
 ```
 
-The project is designed around **policy-enforcement events**, not a general browser-history database.
+The design focuses on **policy-enforcement activity**, not a general browser-history database.
 
-### 10. Analytics Dashboard
+### Analytics Dashboard
 
-The dashboard aggregates local enforcement events into useful summaries, including:
+The dashboard aggregates local enforcement events into:
 
-- blocked requests today;
-- seven-day blocked activity;
-- blocked activity by hour;
-- top blocked destinations;
-- policy impact;
-- category-level activity;
-- recent activity events.
+* blocked requests today;
+* seven-day blocked activity;
+* blocked activity by hour;
+* top blocked destinations;
+* policy impact;
+* category activity;
+* recent activity.
 
-The analytics layer is deliberately separated from the enforcement engine so raw events and derived metrics have distinct responsibilities.
+The analytics layer is separated from the enforcement engine so raw events and derived metrics remain distinct responsibilities.
 
-### 11. Backup & Restore
+### Backup & Restore
 
 Users can export supported SafeBrowse configuration and restore it later.
 
-Imported configuration is validated before it is accepted rather than being blindly inserted into storage.
+Imported configuration is validated before being accepted.
 
-### 12. Optional Browser Sync
+### Optional Browser Sync
 
 SafeBrowse can use browser-provided extension synchronization for supported configuration such as profiles and policies.
 
-Sensitive local authentication material and local activity history are intentionally kept out of the synchronization path.
+Local authentication material and local activity history are intentionally kept out of the synchronization path.
 
-### 13. Local-First Design
+### Local-First Design
 
-The core product does not require a SafeBrowse server to perform policy enforcement.
-
-The intended data flow is:
+SafeBrowse does not require a SafeBrowse backend for core policy enforcement.
 
 ```text
 Browser
@@ -245,32 +220,27 @@ Browser
        └── Authentication → Local
 ```
 
-### 14. Responsive Product UI
+### Responsive Product UI
 
-The management console was designed for:
+The management interface supports:
 
-```text
-Desktop
-Tablet
-Mobile
-Small mobile screens
-```
-
-The interface includes:
-
-- responsive navigation;
-- responsive policy cards;
-- responsive charts;
-- responsive filters;
-- responsive modals/forms;
-- light/dark theme support;
-- consistent SR branding.
+* desktop layouts;
+* tablet layouts;
+* mobile layouts;
+* small-screen layouts;
+* responsive navigation;
+* responsive policy cards;
+* responsive charts;
+* responsive filters;
+* responsive forms and modals;
+* light and dark themes;
+* consistent SR branding.
 
 ---
 
-## How It Works
+## How SafeBrowse Works
 
-A normal blocked navigation follows this flow:
+A blocked navigation follows this flow:
 
 ```text
 User opens a website
@@ -294,25 +264,25 @@ Analytics aggregation
 Dashboard
 ```
 
-The important separation is:
+The key separation is:
 
 ```text
-Policy engine
-    ↓
-Decision
-    ↓
-Browser enforcement
+Policy Engine
+      ↓
+Policy Decision
+      ↓
+Browser Enforcement
 ```
 
-and:
+and independently:
 
 ```text
-Enforcement event
-    ↓
-Local analytics
+Enforcement Event
+      ↓
+Local Analytics
 ```
 
-Blocking does not depend on the dashboard being open.
+Blocking does not depend on the dashboard remaining open.
 
 ---
 
@@ -320,58 +290,56 @@ Blocking does not depend on the dashboard being open.
 
 ```text
                          SafeBrowse
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-              ▼              ▼              ▼
-        React + TS      Service Worker   Blocked Page
-              │              │              │
-              │              ├─ Policy Engine
-              │              ├─ Rule Generator
-              │              ├─ Scheduler
-              │              ├─ Activity Logger
-              │              └─ Message Handler
-              │              │
-              └──────────────┼──────────────┘
-                             │
-                             ▼
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+              ▼               ▼               ▼
+        React + TS       Service Worker    Blocked Page
+              │               │               │
+              │               ├─ Policy Engine
+              │               ├─ Rule Generator
+              │               ├─ Scheduler
+              │               ├─ Activity Logger
+              │               └─ Message Handler
+              │               │
+              └───────────────┼───────────────┘
+                              │
+                              ▼
                   declarativeNetRequest
-                             │
-                    ┌────────┴────────┐
-                    │                 │
-                  ALLOW             BLOCK
-                                      │
-                                      ▼
+                              │
+                       ┌──────┴──────┐
+                       │             │
+                     ALLOW         BLOCK
+                                     │
+                                     ▼
                                blocked.html
 ```
 
-### Main responsibilities
-
-**React UI**
+### React UI
 
 Handles the dashboard, popup, blocked page, policies, profiles, settings, analytics, and user interaction.
 
-**Service worker**
+### Service Worker
 
-Owns background/event-driven responsibilities including policy updates, rule regeneration, scheduling, local state coordination, and message handling.
+Handles background/event-driven operations such as policy updates, rule generation, scheduling, state coordination, and message handling.
 
-**Policy engine**
+### Policy Engine
 
-Evaluates policies, schedules, priorities, URL/domain targets, and conflicts.
+Evaluates targets, schedules, priorities, profiles, and conflicts.
 
-**declarativeNetRequest**
+### declarativeNetRequest
 
-Performs browser-level request handling based on generated declarative rules.
+Performs browser-level request handling using generated declarative rules.
 
-**Local storage**
+### Browser Storage
 
-Persists configuration and policy-enforcement state needed by the application.
+Persists policies, profiles, settings, and policy-enforcement activity required by the application.
 
 ---
 
 ## Policy Engine
 
-The policy model is designed around concepts such as:
+SafeBrowse's policy model is based on concepts such as:
 
 ```text
 Policy
@@ -386,7 +354,7 @@ Policy
 └── profile
 ```
 
-Supported policy ideas include:
+Supported policy concepts include:
 
 ```text
 DOMAIN
@@ -397,47 +365,45 @@ BLOCK
 ALLOW
 ```
 
-The engine also accounts for:
+The engine also evaluates:
 
-- enabled/disabled state;
-- profile ownership;
-- schedule windows;
-- overlapping policies;
-- policy priority;
-- more specific exceptions.
+* enabled/disabled state;
+* profile ownership;
+* schedule windows;
+* overlapping policies;
+* policy priority;
+* specific exceptions.
 
-Keeping these decisions centralized makes it easier to test and reason about policy behavior independently from the UI.
+The decision logic is kept separate from the UI so it can be reused by both the simulator and enforcement layer.
 
 ---
 
 ## Analytics Pipeline
 
-SafeBrowse analytics are derived from policy-enforcement events.
-
 ```text
 Blocked navigation
-       ↓
+        ↓
 BLOCKED_REQUEST
-       ↓
+        ↓
 Local event storage
-       ↓
+        ↓
 Aggregation
-       ├─ Today
-       ├─ Last 7 days
-       ├─ By hour
-       ├─ By domain
-       ├─ By policy
-       └─ By category
-       ↓
+        ├── Today
+        ├── Last 7 days
+        ├── By hour
+        ├── By domain
+        ├── By policy
+        └── By category
+        ↓
 Dashboard
 ```
 
-The dashboard can therefore answer questions such as:
+This allows SafeBrowse to answer questions such as:
 
 ```text
 How many requests were blocked today?
-Which domains were blocked most often?
-Which policy caused the most blocks?
+Which destinations were blocked most often?
+Which policies caused the most blocks?
 At which hours are restrictions triggered most often?
 ```
 
@@ -447,21 +413,19 @@ At which hours are restrictions triggered most often?
 
 SafeBrowse is designed as a privacy-oriented, local-first browser extension.
 
-### Security choices
+### Security Choices
 
-- Manifest V3 architecture.
-- No remotely executed JavaScript or WebAssembly.
-- PIN authentication using a salted PBKDF2-derived verifier.
-- No plaintext PIN storage.
-- Validated configuration import.
-- Policy enforcement through browser-declarative rules.
-- Sensitive local authentication material excluded from optional sync.
+* Manifest V3 architecture;
+* no remotely executed JavaScript or WebAssembly;
+* salted PBKDF2-derived PIN verification;
+* no plaintext PIN storage;
+* validated configuration imports;
+* declarative browser-level enforcement;
+* sensitive authentication material excluded from optional sync.
 
-### Data handling principles
+### Data Handling
 
-SafeBrowse is intended to keep the core data locally in browser storage.
-
-The project does **not intentionally collect**:
+SafeBrowse does not intentionally collect:
 
 ```text
 Passwords
@@ -473,17 +437,11 @@ Form contents
 Device location
 ```
 
-The Activity/Analytics functionality records limited policy-enforcement information such as blocked domains and associated policy metadata.
+The Activity and Analytics features record limited policy-enforcement information such as blocked domains and associated policy metadata.
 
-### Privacy policy
+### Privacy Policy
 
-The public privacy policy is hosted separately from the extension, at:
-
-```text
 https://rajanchaudhary947.vercel.app/safebrowse/privacy
-```
-
-The privacy policy should always match the actual implementation and must be updated if the extension's data practices change.
 
 ---
 
@@ -491,34 +449,32 @@ The privacy policy should always match the actual implementation and must be upd
 
 ### Frontend
 
-- React
-- TypeScript
-- Vite
-- CSS
+* React
+* TypeScript
+* Vite
+* CSS
 
-### Extension Platform
+### Browser Platform
 
-- Manifest V3
-- `declarativeNetRequest`
-- `chrome.storage`
-- `chrome.alarms`
-- `chrome.runtime`
+* Manifest V3
+* `declarativeNetRequest`
+* `chrome.storage`
+* `chrome.alarms`
+* `chrome.runtime`
 
 ### Security
 
-- Web Crypto API
-- PBKDF2
+* Web Crypto API
+* PBKDF2
 
 ### Testing
 
-- Vitest
-- TypeScript compilation checks
+* Vitest
+* TypeScript compilation checks
 
 ---
 
 ## Project Structure
-
-A simplified project layout looks like this:
 
 ```text
 safebrowse/
@@ -572,35 +528,22 @@ safebrowse/
 └── vite.config.ts
 ```
 
-The exact source tree may change as the project evolves; the architecture above describes the current separation of concerns.
-
 ---
 
 ## Getting Started
 
 ### Prerequisites
 
-Install:
+* Node.js LTS
+* npm
+* Microsoft Edge or Google Chrome
 
-- Node.js LTS
-- npm
-- Microsoft Edge or Google Chrome for extension testing
-
-Verify Node.js and npm:
+Verify:
 
 ```bash
 node -v
 npm -v
 ```
-
-### Clone the repository
-
-```bash
-git clone https://github.com/Rajan-chaudhary-947/safebrowse
-cd safebrowse
-```
-
-> Replace the repository URL above with the final public repository URL when the project is pushed to GitHub.
 
 ### Install dependencies
 
@@ -612,30 +555,28 @@ npm install
 
 ## Testing
 
-Run the test suite with:
+Run the test suite:
 
 ```bash
 npm test
 ```
 
-The current suite covers core areas such as:
+The test suite covers core areas including:
 
-- policy behavior;
-- analytics aggregation;
-- security/authentication behavior.
+* policy behavior;
+* analytics aggregation;
+* security and authentication behavior.
 
-A successful run should look similar to:
+Current baseline:
 
 ```text
 Test Files  3 passed
 Tests       10 passed
 ```
 
-The exact number can increase as more tests are added.
-
 ---
 
-## Build the Extension
+## Build
 
 Create the production extension bundle:
 
@@ -649,39 +590,39 @@ The output is generated in:
 dist/
 ```
 
-The built package should contain `manifest.json` directly at its root.
+The built package contains `manifest.json` directly at its root.
 
 ---
 
 ## Run in Microsoft Edge
 
-1. Build the extension:
+Build the extension:
 
 ```bash
 npm run build
 ```
 
-2. Open:
+Open:
 
 ```text
 edge://extensions
 ```
 
-3. Enable **Developer mode**.
+Enable **Developer mode**.
 
-4. Click **Load unpacked**.
+Click **Load unpacked**.
 
-5. Select:
+Select:
 
 ```text
-C:\Projects\safebrowse\dist
+dist/
 ```
 
-6. Open the SafeBrowse popup or Parent Console.
+SafeBrowse will then appear as an installed developer extension.
 
-### Testing a block
+### Test a blocking policy
 
-Create a policy such as:
+Create:
 
 ```text
 Name: Analytics Test
@@ -696,53 +637,53 @@ Then open:
 https://youtube.com
 ```
 
-The request should be redirected to the SafeBrowse blocked page according to the active policy.
+The navigation should be redirected to the SafeBrowse blocked page according to the active policy.
 
 ---
 
 ## Run in Google Chrome
 
-The development flow is the same:
-
-1. Build:
+Build:
 
 ```bash
 npm run build
 ```
 
-2. Open:
+Open:
 
 ```text
 chrome://extensions
 ```
 
-3. Enable **Developer mode**.
+Enable **Developer mode**.
 
-4. Select **Load unpacked**.
+Select **Load unpacked** and choose:
 
-5. Choose the `dist/` folder.
+```text
+dist/
+```
 
-SafeBrowse is designed around Chromium extension APIs, so Chrome and Edge are the primary targets.
+SafeBrowse is designed around Chromium extension APIs, so Chrome and Edge are the primary development targets.
 
 ---
 
 ## Configuration & Data
 
-### Local configuration
+SafeBrowse stores application state through browser-managed extension storage.
 
-SafeBrowse stores application state in browser-managed extension storage.
+Stored configuration can include:
 
-Configuration may include:
+```text
+Profiles
+Policies
+Settings
+Supported sync configuration
+Policy-enforcement events
+```
 
-- profiles;
-- policies;
-- settings;
-- supported sync configuration;
-- policy-enforcement events.
+### Backups
 
-### Backup
-
-Exported configuration files may contain SafeBrowse policy/profile information. Treat exported backups as private configuration files.
+Exported configuration files may contain SafeBrowse policy/profile information and should be treated as private configuration.
 
 ### Sync
 
@@ -752,17 +693,17 @@ Optional browser synchronization is intended for supported configuration rather 
 
 ## Permission Model
 
-SafeBrowse intentionally uses a small set of permissions aligned with its browser-filtering purpose.
+SafeBrowse uses permissions aligned with its web-filtering purpose.
 
-| Permission | Purpose |
-|---|---|
+| Permission              | Purpose                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
 | `declarativeNetRequest` | Enforce user-defined web filtering rules through browser-declarative requests. |
-| `storage` | Persist policies, profiles, settings, and local enforcement data. |
-| `alarms` | Trigger scheduled policy changes. |
-| `http://*/*` | Apply filtering to HTTP website navigation. |
-| `https://*/*` | Apply filtering to HTTPS website navigation. |
+| `storage`               | Persist policies, profiles, settings, and local enforcement data.              |
+| `alarms`                | Trigger scheduled policy changes.                                              |
+| `http://*/*`            | Apply filtering to HTTP website navigation.                                    |
+| `https://*/*`           | Apply filtering to HTTPS website navigation.                                   |
 
-The extension does not use remote executable code and does not require a user account for its core functionality.
+SafeBrowse does not use remote executable code and does not require a user account for its core functionality.
 
 ---
 
@@ -770,22 +711,22 @@ The extension does not use remote executable code and does not require a user ac
 
 ### Primary targets
 
-- Google Chrome
-- Microsoft Edge
+* Google Chrome
+* Microsoft Edge
 
-### Additional Chromium targets
+### Additional Chromium browsers
 
-The architecture is Chromium-oriented and may also work with browsers such as:
+The architecture is Chromium-oriented and may also work with:
 
-- Brave
-- Opera
+* Brave
+* Opera
 
-Each browser should still be tested independently before being advertised as officially supported because browser APIs, permissions, update behavior, and store requirements can differ.
+Each browser should be tested independently before being considered officially supported because browser APIs, update behavior, and store requirements can differ.
 
-### Not currently a direct target
+### Not currently targeted
 
-- Firefox
-- Safari
+* Firefox
+* Safari
 
 Those browsers require separate compatibility testing and potentially different packaging or API handling.
 
@@ -793,7 +734,7 @@ Those browsers require separate compatibility testing and potentially different 
 
 ## Limitations
 
-SafeBrowse is a **browser-level** control system.
+SafeBrowse is a **browser-level web filtering system**.
 
 It does not automatically provide operating-system-wide network filtering.
 
@@ -807,162 +748,137 @@ Operating-system networking
 Mobile applications
 ```
 
-A user with sufficient control over the device may also be able to disable or remove a browser extension. Stronger device-management guarantees require OS, enterprise, DNS, router, or network-level controls.
+A user with sufficient control over the device may also be able to disable or remove a browser extension. Stronger device-management guarantees require OS-level, enterprise, DNS, router, or network controls.
 
-SafeBrowse should therefore be described as a **browser web-filtering and parental-control extension**, not as a complete device-management solution.
+SafeBrowse should therefore be considered a **browser web-filtering and parental-control extension**, not a complete device-management solution.
 
 ---
 
 ## Release & Store Publishing
 
-SafeBrowse is intended to be distributed through official browser extension stores rather than requiring normal users to use Developer Mode.
+SafeBrowse is designed for distribution through official browser extension stores.
 
 ### Microsoft Edge Add-ons
 
-Release flow:
-
 ```text
-Source code
-   ↓
+Source Code
+    ↓
 npm test
-   ↓
+    ↓
 npm run build
-   ↓
+    ↓
 Package dist/
-   ↓
+    ↓
 Microsoft Partner Center
-   ↓
-Privacy + permissions + listing
-   ↓
+    ↓
+Privacy + Permissions + Store Listing
+    ↓
 Certification
-   ↓
+    ↓
 Edge Add-ons
 ```
 
 ### Chrome Web Store
 
-The same Chromium-oriented codebase can be prepared for Chrome Web Store submission:
-
 ```text
-Source code
-   ↓
+Source Code
+    ↓
 npm test
-   ↓
+    ↓
 npm run build
-   ↓
+    ↓
 Package dist/
-   ↓
+    ↓
 Chrome Web Store
-   ↓
-Privacy + permissions + listing
-   ↓
+    ↓
+Privacy + Permissions + Store Listing
+    ↓
 Review
-   ↓
+    ↓
 Chrome Web Store
 ```
 
 ### Versioning
 
-When shipping an update, increase the extension version in `manifest.json`.
-
-Example:
+Extension releases follow semantic-style version progression:
 
 ```text
-2.0.0 → 2.0.1
-2.0.1 → 2.1.0
-2.1.0 → 3.0.0
+2.0.0
+2.0.1
+2.1.0
+3.0.0
 ```
 
-After store approval, the browser's extension update mechanism distributes the new package to existing users.
+Each published update requires an increased extension version in `manifest.json`.
 
 ---
 
 ## Development Workflow
 
-The recommended local cycle is:
-
 ```text
 Edit source
-   ↓
+    ↓
 npm test
-   ↓
+    ↓
 npm run build
-   ↓
+    ↓
 Reload extension
-   ↓
-Test in Edge/Chrome
-   ↓
-Inspect service worker logs when needed
+    ↓
+Test in Edge / Chrome
+    ↓
+Inspect service worker logs when required
 ```
 
-For changes affecting the background service worker, policy engine, or analytics pipeline, test the full browser flow rather than relying only on unit tests.
+Changes affecting the policy engine, service worker, rule generation, or analytics should be verified through the complete browser flow rather than relying only on unit tests.
 
 ---
 
-## Future Improvements
+## Future Scope
 
-Possible future extensions to the project include:
+Potential future improvements include:
 
-- encrypted cloud backups;
-- remote parent/child account management;
-- multi-device policy synchronization;
-- richer category databases;
-- browser-specific adapters;
-- stronger enterprise/device-management integrations;
-- advanced policy simulation and debugging;
-- optional native networking companion;
-- additional automated browser tests;
-- deeper performance benchmarking for large rule sets.
+* encrypted cloud backups;
+* remote parent/child account management;
+* multi-device policy synchronization;
+* richer category databases;
+* browser-specific adapters;
+* stronger enterprise/device-management integrations;
+* advanced policy simulation and debugging;
+* optional native networking companion;
+* additional automated browser tests;
+* performance benchmarking for large rule sets.
 
 ---
 
 ## Project Status
 
-SafeBrowse is currently in the **release-preparation stage**.
+**Release Preparation**
 
-### Completed / implemented
+### Implemented
 
-- Manifest V3 architecture
-- Domain-based blocking
-- Allow/block policies
-- Category-based filtering
-- Scheduled policies
-- Policy priorities and conflict handling
-- Multiple profiles
-- Parent PIN protection
-- Policy simulator
-- Local activity logging
-- Analytics dashboard
-- Backup/restore
-- Optional browser configuration sync
-- Responsive management UI
-- Light/dark theme
-- SR branding
-- Automated tests
-- Production Vite build
+* Manifest V3 architecture
+* Domain-based blocking
+* Allow/block policies
+* Category filtering
+* Scheduled policies
+* Policy priorities and conflict handling
+* Multiple profiles
+* Parent PIN protection
+* Policy simulator
+* Local activity logging
+* Analytics dashboard
+* Backup/restore
+* Optional browser configuration sync
+* Responsive management UI
+* Light/dark theme
+* SR branding
+* Automated tests
+* Production Vite build
 
-### Release preparation
+### Release Targets
 
-- Final browser QA
-- Analytics end-to-end verification
-- Final security/privacy audit
-- Store screenshots and metadata
-- Chrome Web Store submission
-- Microsoft Edge Add-ons submission
-
----
-
-## License
-
-Add the project's final license here before public distribution.
-
-Recommended for a personal/open-source project:
-
-```text
-MIT License
-```
-
-If you choose MIT, add a `LICENSE` file containing the standard MIT license text and update this section accordingly.
+* Google Chrome
+* Microsoft Edge
 
 ---
 
@@ -970,8 +886,8 @@ If you choose MIT, add a `LICENSE` file containing the standard MIT license text
 
 ### Rajan Chaudhary
 
-Full-Stack Developer
+**Full-Stack Developer**
 
-Portfolio: [rajanchaudhary947.vercel.app](https://rajanchaudhary947.vercel.app)
+[Portfolio](https://rajanchaudhary947.vercel.app)
 
-SafeBrowse was designed and developed as a practical exploration of browser extensions, web filtering, policy engines, event-driven architecture, local analytics, security, and privacy-oriented product engineering.
+SafeBrowse is a practical exploration of browser extension development, web filtering, policy engines, event-driven architecture, local analytics, security, and privacy-oriented product engineering.
